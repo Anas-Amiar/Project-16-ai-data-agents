@@ -1,0 +1,16 @@
+# Framework
+anthropic>=0.40.0
+pytest>=8.0.0
+
+# Libraries the agents use in their generated code
+pandas
+numpy
+plotly
+scikit-learn
+scipy
+statsmodels
+joblib
+fastapi
+uvicorn
+httpx
+pydantic>=2.7.0

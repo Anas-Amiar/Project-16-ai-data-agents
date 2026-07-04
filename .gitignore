@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+runs/
+data/sales_data.csv
+data/churn_data.csv
+data/houses.csv
+data/acme_faq.md

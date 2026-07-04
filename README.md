@@ -30,9 +30,25 @@ python3 -m agentkit.run data-scientist
 python3 -m agentkit.run ai-engineer
 python3 -m agentkit.run ml-engineer
 
-# Or on your own data with your own task:
+# Or on your own data with your own task — the agents handle ANY task in
+# their role, not just the default recipe:
 python3 -m agentkit.run data-analyst --data ~/my_sales.csv --task "Find the churn drivers"
+python3 -m agentkit.run ai-engineer --data docs.md \
+  --task "Build a RAG system with hybrid search, then git init and push it to GitHub" \
+  --allow-git
 ```
+
+**Full role scope.** Each agent's prompt covers its whole role (the analyst does cohorts,
+funnels, A/B readouts...; the AI engineer does RAG, evals, routers, caches, agent loops...)
+— the default task is just the bundled example.
+
+**Git with a human gate.** Agents can use git freely for local work (init/add/commit).
+Outward or destructive commands — `git push`, `gh repo create`, `git reset --hard`,
+`rm -rf` — are intercepted: denied by default, or gated behind an interactive y/n
+approval prompt when you pass `--allow-git`. The agent is instructed to treat a DENIED
+as final and finish local work instead of retrying.
+
+**Turn budget.** `--max-turns` (default 60) caps run length and cost.
 
 Each run creates `runs/<agent>-<timestamp>/` containing the data, every script the agent
 wrote, and its `outputs/` deliverables. You watch the agent work live — every tool call and
@@ -58,9 +74,11 @@ agentkit/
 data/
   make_samples.py Generates the four sample datasets (sales, churn, houses, FAQ)
 tests/
-  test_framework.py  Offline verification with a scripted FakeClient: proves the
-                  loop executes tools end-to-end, the sandbox blocks path escapes,
-                  bash errors/timeouts are handled, and all 4 agents are wired
+  test_framework.py  Offline verification (8 tests, zero tokens): the loop executes
+                  tools end-to-end via a scripted FakeClient, the sandbox blocks
+                  path escapes, bash errors/timeouts are handled, the git guard
+                  denies push/repo-create/reset --hard by default and honors the
+                  approval hook, and all 4 role prompts are wired and broadened
 notebooks/        The original Managed Agents cookbook notebooks (the hosted-
                   platform path — needs Managed Agents beta access)
 ```

@@ -27,6 +27,11 @@ def main() -> None:
     parser.add_argument("--data", help="path to your CSV/markdown (default: bundled sample)")
     parser.add_argument("--task", help="override the default task prompt")
     parser.add_argument("--model", default=DEFAULT_MODEL)
+    parser.add_argument("--allow-git", action="store_true",
+                        help="allow git push / repo creation, each gated by an "
+                             "interactive y/n approval prompt")
+    parser.add_argument("--max-turns", type=int, default=60,
+                        help="max agent turns (default 60; more turns = more cost)")
     args = parser.parse_args()
 
     if not os.environ.get("ANTHROPIC_API_KEY"):
@@ -38,6 +43,16 @@ def main() -> None:
         )
     from anthropic import Anthropic
     client = Anthropic()
+
+    if args.allow_git:
+        import agentkit.tools as tools
+
+        def interactive_approval(command: str):
+            print(f"\n  >>> APPROVAL REQUIRED for: {command}")
+            answer = input("  approve? [y/N] ").strip().lower()
+            return True if answer == "y" else "DENIED: human rejected this command."
+
+        tools.APPROVAL_HOOK = interactive_approval
 
     spec = AGENTS[args.agent]
 
@@ -61,7 +76,8 @@ def main() -> None:
     task = (args.task or spec["default_task"]).format(data=data_path.name)
 
     print(f"=== {args.agent} | model={args.model} | workdir={workdir} ===")
-    final = run_agent(client, spec["system"], task, workdir, model=args.model)
+    final = run_agent(client, spec["system"], task, workdir, model=args.model,
+                      max_turns=args.max_turns)
     print(f"\n=== Agent finished ===\n{final}\n")
     print(f"Outputs: {workdir}/outputs/")
 

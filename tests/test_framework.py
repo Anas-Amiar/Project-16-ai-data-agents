@@ -100,3 +100,36 @@ def test_agent_definitions_complete():
     for name, spec in AGENTS.items():
         assert "{data}" in spec["default_task"]
         assert "outputs" in spec["system"]
+
+
+def test_git_guard_denies_by_default(tmp_path):
+    import agentkit.tools as tools
+    for cmd in ["git push origin main", "gh repo create x --public",
+                "git reset --hard HEAD~3", "rm -rf /tmp/x"]:
+        result = execute_tool("bash", {"command": cmd}, tmp_path)
+        assert result.startswith("DENIED"), f"not guarded: {cmd}"
+    # normal git commands are NOT guarded
+    result = execute_tool("bash", {"command": "git status"}, tmp_path)
+    assert not result.startswith("DENIED")
+
+
+def test_git_guard_approval_hook(tmp_path):
+    import agentkit.tools as tools
+    original = tools.APPROVAL_HOOK
+    try:
+        tools.APPROVAL_HOOK = lambda cmd: True   # human approves
+        result = execute_tool("bash", {"command": "git push --dry-run 2>&1 || true"}, tmp_path)
+        assert not result.startswith("DENIED")
+
+        tools.APPROVAL_HOOK = lambda cmd: "DENIED: human rejected this command."
+        result = execute_tool("bash", {"command": "git push origin main"}, tmp_path)
+        assert result.startswith("DENIED")
+    finally:
+        tools.APPROVAL_HOOK = original
+
+
+def test_broadened_role_prompts():
+    from agentkit.definitions import AGENTS
+    for name, spec in AGENTS.items():
+        assert "ANY" in spec["system"], f"{name} prompt not broadened"
+        assert "Engineering practices" in spec["system"]
